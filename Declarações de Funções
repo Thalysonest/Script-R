@@ -17,3 +17,5 @@ Corpus_To_Char <- function(var_corpus){
   return(var_char)
 }
 
+
+
