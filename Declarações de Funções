@@ -1,0 +1,19 @@
+# Função para transformar uma variável Corpus em um vetor de character
+
+Corpus_To_Char <- function(var_corpus){
+  
+  var_char <- var_corpus[[1]]$content
+  
+  if(length(var_corpus)>1){
+    
+    for ( i in 2:length( var_corpus)){
+      
+      text <- var_corpus[[i]]$content
+      
+      var_char <- c( var_char, text)
+    }
+  }
+  
+  return(var_char)
+}
+
