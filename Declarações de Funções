@@ -1,4 +1,265 @@
-# Função para transformar uma variável Corpus em um vetor de character
+
+# instalar pacotes
+
+install.packages(textreuse)
+install.packages(rslp)
+install.packages(tm)
+install.packages(proxy)
+install.packages(factoextra)
+install.packages(smdc)
+install.packages(text2vec)
+install.packages(ANLP)
+install.packages(ngram)
+install.packages(ggplot2)
+install.packages(stringr)
+install.packages(stringi)
+install.packages(cluster)
+install.packages(dendextend)
+
+# carregar os pacotes instalados
+library(textreuse)
+library(rslp)
+library(tm)
+library(proxy)
+library(factoextra)
+library(smdc)
+library(text2vec)
+library(ANLP)
+library(ngram)
+library(ggplot2)
+library(stringr)
+library(stringi)
+library(cluster)
+library(dendextend)
+
+###########################################################################
+####################### DECLARAÇÕES DE FUNÇÕES ############################
+
+# calcula frequência absoluta
+freq_absoluta <- function(texto_char){
+  texto_char <- strsplit(texto_char, "\\W+")
+  texto_char <- unlist(texto_char)
+  texto_char <- table(texto_char)
+  freq_texto <- sort(texto_char, decreasing=TRUE)
+  return(freq_texto)
+}
+
+# Função procura uma palavra em uma lista de palavras
+searchword <- function(palavra,listaword){
+  
+  c=1
+  
+  if(class(listaword)=="list"){
+    
+    while(c <= length(names(listaword))){
+      
+      if(palavra==names(listaword)[c]){
+      return(c)
+    }
+    c=c+1
+  }
+  }else if (class(listaword[,1])=="character"){
+
+    while(c <= length(listaword[,1])){
+      
+      if(palavra==listaword[,1][c]){
+        return(c)
+      }
+      c=c+1;
+    }
+  }
+}
+Bigrama_relativa <- function(texto,dupla_palavras){
+  
+  k=1
+  
+  # variável que guarda as freq. relativa dos bi-gramas
+  relativa <- c()
+  
+  # loop para as duplas de palavras
+  
+  while(k <= length(dupla_palavras)){
+    
+    # adiciona os bigramas na coluna de um data.frame
+    mat_dupla <- as.data.frame(matrix(data=dupla_palavras,ncol = 1))
+    
+    # quebra as duas palavras em um vetor de duas palavras
+    dupla <- words(dupla_palavras[k])
+    
+    i=1
+    
+    # realiza a contagem de quantas vezes o bigrama aparece na coleção dos documentos
+    cont=0
+    
+    #loop para a quantidade de documentos
+    while(i <= length(texto)){
+      
+      j=1
+      # divide o texto em um vetor de palavras
+      text_word <- words(texto[i])
+      #loop para o número de palavras do texto
+      while(j <= length(text_word)){
+        #busca ver se existe uma igualdade
+        if(dupla[1]==text_word[j]){
+          if(j+1 <= length(text_word)){
+            if(dupla[2]==text_word[j+1]){
+              cont =cont+1
+              j=length(text_word)
+            } 
+          }
+        }
+        
+        j=j+1
+      }
+      i=i+1
+    }
+    # calcula freq relativa dos bigramas
+    relativa <- c(relativa, (cont)/length(texto))
+    k=k+1
+  }
+  
+  # monta o data.frame com as duplas de palavras e suas freq. relativa
+  relativa <- as.data.frame(relativa)
+  
+  mat_relativa <- cbind(mat_dupla,relativa)
+  
+  names(mat_relativa) <- c("Bi-grama","Relativa")
+  
+  vet <- c()
+  # busca identificar os bigramas com freq. relativa zero
+  for(i in 1:dim(mat_relativa)[1]){
+    if(mat_relativa[i,2]==0){
+      vet <- c(vet,i)
+    }
+  }
+  
+  #retira os bigramas com freq. zero
+  mat_relativa <- mat_relativa[-vet,]
+  
+  # faz uma multiplicação por 100
+  mat_relativa[,2] <- mat_relativa[,2]*100
+  
+  return(mat_relativa)
+}
+contar_palavra_vetor <- function(texto,palavra){
+  
+  vet <- integer(length = length(texto))
+  if(class(texto)[1]=="SimpleCorpus"){
+    texto <- content(texto)
+  }
+  a=1
+  while(a <= length(texto)){
+    sub <- words(texto[a])
+    b=1
+    while(b <= length(sub)){
+      if(sub[b]==palavra){
+        vet[a] <- vet[a]+1;
+      }
+      b=b+1
+    }
+    a=a+1
+  }
+  return(vet)
+}
+
+freq_relativa_vetor <- function(palavra1,palavra2,texto){
+  cont=0
+  vet1 <- contar_palavra_vetor(texto,palavra1)
+  vet2 <- contar_palavra_vetor(texto,palavra2)
+  
+  for (i in 1:length(vet1)){
+    if(vet1[i]==1 | vet2[i]==1)
+      cont=cont+1
+  }
+  
+  return(cont/length(vet1))
+}
+
+
+Distribuicao_palavra <- function(bigram){
+  
+  i=1
+  # dupla_word contém as duas palavras do bigrama
+  dupla_word <- words(bigram[i,1])
+  
+  # criando uma variável do tipo lista para adicionar os dataframe
+  lista <- list()
+  
+  # a primeira coluna do data frame será colocado a segunda palavra do bigrama
+  # bigram[i,2] está a frequência do bigrama stringsAsFactor igual a falso para que
+  # as variáveis do data frame não sejam da classe factor
+  lista[[i]] <- data.frame(matrix(c(dupla_word[2],bigram[i,2]),ncol = 2),stringsAsFactors=FALSE)
+  
+  # Adicionando o nome da lista 1
+  names(lista)[[i]] <- dupla_word[1]
+  
+  i=2
+  
+  while(i <= length(bigram[,1])){
+    
+    dupla_word <- words(bigram[i,1])
+    
+    # procura se a palavra 1 da dupla_word já está na lista de nomes, se sim vai 
+    # retornar a posição, caso contrário vai retornar zero
+    pos <- searchword2(dupla_word[1],names(lista))
+    
+    if(pos == 0){
+      lista[[length(lista)+1]] <- data.frame(matrix(c(dupla_word[2],bigram[i,2]),ncol = 2),stringsAsFactors=FALSE)
+      names(lista)[[length(lista)]] <- dupla_word[1]
+    }else{
+      # adiciona a palavra e sua frequência ao data frame já existente
+      lista[[pos]] <- rbind(lista[[pos]],data.frame(matrix(c(dupla_word[2],bigram[i,2]),ncol = 2)),stringsAsFactors=FALSE)
+    }
+    i=i+1
+ 
+  }
+  # Loop para modificar a lista
+  for(a in 1:length(lista)){
+    
+    # transforma a segunda coluna do dataframe em numérico
+    lista[[a]][,2] <- as.numeric(lista[[a]][,2])
+    
+    # Adiciona nomes as colunas do data frame 
+    # 1° coluna recebe a palavra que terá a predição
+    # 2° coluna recebe nome de frequência
+    names(lista[[a]]) <- c(names(lista)[a],"Frequência")
+    
+    # calcula a porcentagem considerando a segunda coluno do dataframe
+    porcentagem <- round(lista[[a]][,2]/sum(lista[[a]][,2])*100,3)
+    
+    # Cria um data.frame com uma coluna com as porcentagens da variável porcentagem
+    porcentagem <- data.frame("Porcentagem" = porcentagem)
+    
+    # combina as colunas já existente na lista com coluna com as porcentagens
+    lista[[a]] <- cbind(lista[[a]],porcentagem)
+    
+    # soma dos valores absolutos
+    sum_abs <- sum(lista[[a]][,2])
+    
+    #soma das porcentagens
+    sum_porc <- sum(lista[[a]][,3])
+    
+    # diferença entre as porcentagens somada considerando 100
+    sum_porc <- 100 - sum_porc
+    
+    if(sum_porc > 0){
+      
+      lista[[a]][1,3] <- lista[[a]][1,3] + sum_porc
+      
+    }else if(sum_porc < 0){
+      
+      lista[[a]][1,3] <- lista[[a]][1,3] - sum_porc
+    }
+    # Adicionando total, soma dos absolutos e 100%
+    lista[[a]][dim(lista[[a]])[1]+1,3] <- 100
+    lista[[a]][dim(lista[[a]])[1],2] <- sum_abs
+    lista[[a]][dim(lista[[a]])[1],1] <- "Total"
+  }
+  
+  return(lista)
+}
+
+# funcao que transforma corpus em character
 
 Corpus_To_Char <- function(var_corpus){
   
@@ -17,5 +278,628 @@ Corpus_To_Char <- function(var_corpus){
   return(var_char)
 }
 
+# função procura palavras
+searchword2 <- function(palavra,vetorcharacter){
+  
+  a=1
+  if(class(vetorcharacter)=="character"){
+    while(a <= length(vetorcharacter)){
+      if(palavra==vetorcharacter[a]){
+        return(a)
+      }
+      a=a+1
+    }
+  }
+  return(0)
+}
+
+diferenca_relativa <- function(mat_1,mat_2,nome){
+  
+  #criando um data frame com 4 colunas 1C: palavra 2C: % empregos
+  # 3C: % ementas 4C:a diferença entre empregos e ementas
+  mat_new <- as.data.frame(matrix(0,nrow =dim(mat_1)[1] ,ncol = 4))
+  
+  # adicionando as palavras a 1° coluna
+  mat_new[1:dim(mat_new)[1],1] <- rownames(mat_1)
+  
+  # adicionando as frequências dos anúncios a 2° coluna
+  mat_new[1:dim(mat_new)[1],2] <- mat_1[,1]
+  i=1
+  while(i <= dim(mat_1)[1]){
+    pos <- searchword2(mat_new[i,1],rownames(mat_2))
+    if(pos!=0){
+      mat_new[i,3] <- mat_2[pos,1]
+    }
+    i=i+1
+  }
+  
+  # arredondando os valores da coluna 2
+  mat_new$V2 <- round(mat_new$V2,3)
+  # arredondando os valores da coluna 3
+  mat_new$V3 <- round(mat_new$V3,3)
+  
+  mat_new$V4 <- mat_new$V2 - mat_new$V3
+  nam <- c("Pal_Anúncios","Anúncios","Ementas")
+  
+  if(nome == "absoluta"){
+    names(mat_new) <- c(nam,"Diferença_absoluta")
+    
+  }else if(nome == "relativa"){
+    names(mat_new) <- c(nam,"Diferença_Relativa")
+  }
+  
+  
+  return(mat_new)
+}
+
+retirar_plural <- function(palavra,lista){
+  
+  i=1
+  
+  lista_excecao <- as.data.frame(matrix(c("variáveis","variável","tangíveis","tangível","saudáveis","suadável","intangíveis","intangível"),ncol = 2, byrow = TRUE))
+  
+  colnames(lista_excecao) <- c("Plural","Singular")
+  
+  lista_excecao$Plural <- as.character(lista_excecao$Plural)
+  
+  lista_excecao$Singular <- as.character(lista_excecao$Singular)
+  
+  # Variável que vai receber a palavra plural 
+  word_plural <- vector()
+  
+  # variável que vai receber a palavra que não está mais na forma plural
+  n_plural <- vector()
+  
+  #loop para o número de palavras 
+  while(i <= length(palavra)){
+    
+    p <- searchword2(palavra[i],lista_excecao[,1])
+    
+    # verifica se a palavra pertence a uma lista especial de plurais
+    if(p > 0){
+      palavra[i] <- lista_excecao[p,2]
+    }
+    
+    # Verifica se a palavra termina com s
+    if(str_sub(palavra[i],nchar(palavra[i])) == "s"){
+      
+      word_plural[length(word_plural)+1] <- palavra[i]
+      
+      # verifica se a palavra termina com "ões","ãos" e "ães" se sim substituir por
+      # ão ex: operações
+      if(str_sub(palavra[i],nchar(palavra[i])-2) == "ões" 
+         || str_sub(palavra[i],nchar(palavra[i])-2) == "ãos" 
+         || str_sub(palavra[i],nchar(palavra[i])-2) == "ães"){
+        
+        palavra[i] <- paste(str_sub(palavra[i],1,nchar(palavra[i])-3),"ão",sep = "")
+        
+        # Palavras terminada com "zes" ex: rapazes
+      }else if(str_sub(palavra[i],nchar(palavra[i])-2) == "zes"){
+        
+        palavra[i] <- str_sub(palavra[i],1,nchar(palavra[i])-2)
+        
+        # Palavras que terminam com "res" ex: vendedores 
+      }else if(str_sub(palavra[i],nchar(palavra[i])-2) == "res"){
+        
+        palavra[i] <- str_sub(palavra[i],1,nchar(palavra[i])-2)
+        
+        # Palavras que terminam com "ais" ex: varais
+      }else if(str_sub(palavra[i],nchar(palavra[i])-2) == "ais"){
+        
+        palavra[i] <- paste(str_sub(palavra[i],1,nchar(palavra[i])-2),"l", sep = "")
+        
+        # Palavras que terminam com "éis" ex: aluguéis 
+      }else if(str_sub(palavra[i],nchar(palavra[i])-2) == "éis"){
+        
+        palavra[i] <- paste(str_sub(palavra[i],1,nchar(palavra[i])-3),"el", sep = "")
+        
+        # Palavras que terminam com "eis" ex: contábeis
+      }else if(str_sub(palavra[i],nchar(palavra[i])-2) == "eis"){
+        
+        palavra[i] <- paste(str_sub(palavra[i],1,nchar(palavra[i])-3),"il", sep = "")
+        
+        # Palavras que terminam com "óis" ex: lençóis
+      }else if(str_sub(palavra[i],nchar(palavra[i])-2) == "óis"){
+        
+        palavra[i] <- paste(str_sub(palavra[i],1,nchar(palavra[i])-3),"ol", sep = "")
+        
+        # Palavras que terminam com "uis" ex : pauis
+      }else if(str_sub(palavra[i],nchar(palavra[i])-2) == "uis"){
+        
+        palavra[i] <- paste(str_sub(palavra[i],1,nchar(palavra[i])-2),"l", sep = "")
+        
+        # Palavras que terminam com "ns" ex: origens 
+      }else if(str_sub(palavra[i],nchar(palavra[i])-1) == "ns"){
+        
+        palavra[i] <- paste(str_sub(palavra[i],1,nchar(palavra[i])-2),"m", sep = "")
+        
+        # Palavras que terminal com "os" ex: atributos
+      }else if(str_sub(palavra[i],nchar(palavra[i])-1) == "os"){
+        
+        palavra[i] <- str_sub(palavra[i],1,nchar(palavra[i])-1)
+        
+        # Palavras que terminal com "as" ex: falhas
+      }else if(str_sub(palavra[i],nchar(palavra[i])-1) == "as"){
+        
+        palavra[i] <- str_sub(palavra[i],1,nchar(palavra[i])-1)
+        
+        # Palavras que terminal com "es" ex: emergentes
+      }else if(str_sub(palavra[i],nchar(palavra[i])-1) == "es"){
+        
+        palavra[i] <- str_sub(palavra[i],1,nchar(palavra[i])-1)
+        
+      }
+      n_plural[length(n_plural)+1] <- palavra[i]
+    }
+    i=i+1
+  }
+  if(lista == 0){
+    # retornar 
+    ps <- cbind(word_plural,n_plural)
+    colnames(ps) <- c("Plural","Singular")
+    return(ps)
+    
+  }else if(lista == 1 ){
+    # Retorna todas as palavras passadas
+    return(palavra)
+    
+  }else if( lista == 2){
+    
+    # Retorna as palavras que estão na lista de exceção
+    return(lista_excecao)
+  }
+  
+}
+
+# função para retirar plural
+Retira_Plural <- function(texto_char){
+  
+  i=1
+  
+  while(i <= length(texto_char)){
+    
+    # divide o documento em um vetor de character
+    group_word <- words(texto_char[i])
+    
+    # retira o plural das palavras
+    group_word <- retirar_plural(group_word, lista = 1)
+    
+    # monta o documento novamente
+    texto_char[i] <- paste(group_word,collapse=" ")
+    
+    i=i+1
+  }
+  return(texto_char)
+}
+
+Freq_relativa_palavra <- function(lista_palavras,freq_relativa){
+  i=1
+  
+  vetor_pos <- vector()
+  
+  while(i <= length(lista_palavras)){
+    
+    # realiza uma pesquisa nas palavras da freq. relativa dos anúncios
+    pos <- searchword2(lista_palavras[i],names(freq_relativa))
+    
+    if(pos != 0){
+      vetor_pos <- c(vetor_pos,pos)
+    }
+    i=i+1
+  }
+  
+  mat_lista_palavras <- as.matrix(freq_relativa) 
+  
+  mat_lista_palavras <- as.matrix(mat_lista_palavras[vetor_pos,])
+  
+  # Mostra as linguagem de programação em ordem decrescente no TADS
+  mat_lista_palavras <- as.matrix(mat_lista_palavras[head(order(mat_lista_palavras[,1],decreasing = TRUE),dim(mat_lista_palavras)[1]),])
+  
+  colnames(mat_lista_palavras) <- "Freq.Relativa"
+  
+  return(mat_lista_palavras)
+}
+
+# calcula as frequencias relativas das palavras nos documentos
+freq_relativa_word <- function(matrix){
+  probementa <- apply(matrix,1, function(c)sum(c!=0))
+
+  probementa <- ((probementa)/dim(matrix)[2])*100
+
+  probementa <- as.matrix(probementa)
+
+  ementanum <- head(order(probementa,decreasing = TRUE),length(probementa))
+
+  return(probementa[ementanum,])
+}
+
+####função para criar uma lista de palavras com o nome sendo o radical e adicionando palavras que se encaixam 
+#no mesmo radical exemplo: product contém as palavras produtos e produto
+
+construirlista <- function(opiniao){
+
+  b=1
+  #criando uma variável tipo lista
+  
+  radword <- list()
+  
+  #loop para o número de documetos
+ while(b <= length(opiniao)){ 
+   
+   #função words identifica cada palavra do documento do índice b
+   
+   listanormal <- words(opiniao[b]);
+   
+   #realizando stemming da palavra para criar lista baseado no radical
+   
+   radical <- stemDocument(opiniao,language = "portuguese");
+   
+   #selecionando uma palavra que foi aplicado o radical
+   listaradical <- words(radical[b]);
+   
+   a=1;
+   
+   #loop para o número de palavras 
+  while(a <= length(listaradical)){
+  
+    #verifica se a palavra está adicionada a variável radword
+  
+    pos <- searchword(listaradical[a], radword)
+  #se pos é igual a zero a palavra não faz parte de radword
+  
+    if(length(pos)==0){
+    
+      addradical <- list(listanormal[a])
+    
+      names(addradical)[1] <- listaradical[a]
+    
+      radword<- append(radword,addradical)
+  }else{
+    
+    radword[[pos]] <- c(radword[[pos]],listanormal[a])
+  }
+  
+  a=a+1;
+  }
+  b=b+1;
+ }
+  return(radword)
+}
+
+listatrocar <- function(lista){
+
+  a=1
+  mat <- as.matrix(names(lista))
+  mat2 <- matrix(NA,nrow = length(lista))
+  
+  while(a <= length(lista)){
+  
+    mat2[a,] <- names(sort(table(lista[[a]]), decreasing = TRUE))[1]
+    a=a+1;
+  }
+  mat <- cbind(mat,mat2)
+  colnames(mat) <- c("Radical","M_Frequente")
+  return(mat)
+}
+
+####função para criar uma lista de palavras com o nome sendo o radical e adicionando palavras que se encaixam 
+#no mesmo radical examplo: product contém as palavras produtos e produto
+ funcaosubstituir <- function(texto,matrizword){
+  a=1
+  while(a <= length(texto)){
+  
+    vetorpalavras <- words(texto[a])
+    b=1
+    while(b <= length(words(texto[a]))){
+    
+    palavra <- words(texto[a])[b]
+    
+    pos <- searchword(palavra,matrizword)
+    
+    vetorpalavras[b] <- matrizword[,2][pos] 
+    
+    b=b+1
+  }
+  texto[a] <- paste(vetorpalavras,collapse=" ")
+  a=a+1
+  }
+  return(texto)
+}
 
 
+###########################################################################
+# PRÉ PROCESSAMENTO DAS EMENTAS
+
+ementa <- Corpus(DirSource('Diretório'))
+
+inspect(ementa)
+
+n_ementa <- names(ementa)
+
+n_ementa
+
+ementa <- tm_map(ementa, tolower) 
+
+ementa <- Corpus_To_Char(ementa)
+
+# remove pontuação ex: , .: : a função gsub executa a tarefa de remover
+
+ementa <- gsub("[[:punct:]]"," ",ementa)
+
+ementa <- gsub("'s", " ", ementa)
+
+ementa <- gsub("-"," ", ementa)
+
+ementa <- gsub("\n"," ",ementa)
+
+# transforma a variável ementa na classe corpus
+ementa <- Corpus(VectorSource(ementa), readerControl = list(language = "portuguese"))
+
+stopwords_ementa <- stopwords("portuguese")
+x <- c("é")
+stopwords_ementa <- append(x,stopwords_ementa)
+
+# remove palavras do grupo de stopwords
+ementa <- tm_map(ementa, FUN = removeWords, words = stopwords_ementa)
+
+# Retira os espaços em branco nos documentos
+ementa <- tm_map(ementa, stripWhitespace) 
+
+# Transforma variavel em character
+ementa_char <- Corpus_To_Char(ementa)
+
+# função retira o plural de vários documentos
+ementa_char <- retira_plural(ementa_char)
+
+# PRÉ PROCESSAMENTO DOS ANÚNCIOS DE EMPREGO
+
+# carrega os anúncios
+empregos <- Corpus(DirSource('Diretório'))
+
+empregos <- tm_map(empregos, tolower)
+
+empregos <- Corpus_To_Char(empregos)
+
+empregos <- gsub("[[:punct:]]"," ",empregos)
+
+empregos <- gsub("\n"," ",empregos)
+
+# transformando em corpus novamente
+empregos <- Corpus(VectorSource(empregos), readerControl = list(language = "portuguese"))
+
+stopwords_empregos <- stopwords("portuguese")
+x <- c("é")
+stopwords_empregos <- append(x,stopwords_empregos)
+
+empregos <- tm_map(empregos, FUN = removeWords, words = stopwords_empregos)
+
+# Retira os espaços em branco nos documentos
+empregos <- tm_map(empregos, stripWhitespace) 
+
+#transforma variavel em character
+empregos_char <- Corpus_To_Char(empregos)
+
+# retira plural dos anúncios
+empregos_char <- retira_plural(empregos_char)
+
+ementa_empregos <- append(ementa_char,empregos_char)
+
+###########################################################################
+###########################################################################
+# OS ANÚNCIOS E EMENTAS JUNTO PARA SUBSTITUIÇÃO DOS RADICAIS
+#lista de palavras com radical e as palavras que pertencem ao mesmo radical
+radword_ementa_empregos <- construirlista(ementa_empregos)
+
+#Lista das palavras mais frequente
+mat_ementa_empregos <- listatrocar(radword_ementa_empregos)
+
+#fazendo stemming das palavras para substituir pela as palavras mais comum
+ementa_empregos<- stemDocument(ementa_empregos,language = "portuguese")
+
+#substitui as palavras pelas mais frequente
+
+ementa_empregos <- funcaosubstituir(ementa_empregos,mat_ementa_empregos)
+
+# ementa de TGQ/ TADS
+ementa_char <- ementa_empregos[1:length(ementa_char)]
+
+# muda a codificação das palavras de utf 8 para latini
+ementa_char <- iconv(ementa_char, "UTF-8", "latin1")
+
+# empregos de TGQ/ TADS
+empregos_char <- ementa_empregos[length(ementa_char) + 1:length(ementa_empregos)]
+
+a <- length(ementa_empregos) - length(ementa_char)
+
+empregos_char <- empregos_char[1:a]
+
+# muda a codificação das palavras de utf 8 para latini
+empregos_char <- iconv(empregos_char, "UTF-8", "latin1")
+
+# realiza cálculo das freq. absoluta
+freq_ementa <- freq_absoluta(ementa_char)
+
+head(freq_ementa,20)
+
+# atribui as ementa a outra variável
+corpus_ementa <- ementa_char
+
+corpus_ementa <- Corpus(VectorSource(corpus_ementa))
+
+tdm_ementa <- TermDocumentMatrix(corpus_ementa, control = list(wordLengths = c(1,Inf)))
+
+dtm_ementa <- DocumentTermMatrix(corpus_ementa, control = list(wordLengths = c(1,Inf)))
+
+# Mostra as 15 maiores frequência relativa das ementas
+relativa_ementa <- freq_relativa_word(as.matrix(tdm_ementa))
+relativa_ementa [1:15]
+
+# calcula a freq. absoluta dos Anúncios
+freq_empregos <- freq_absoluta(empregos_char)
+
+# mostra as 15 palavras com as maioree freq. absoluta
+head(freq_empregos,15)
+
+# atribui as ementa a outra variável
+corpus_emprego <- empregos_char
+
+corpus_emprego <- Corpus(VectorSource(corpus_emprego))
+
+tdm_emprego <- TermDocumentMatrix(corpus_emprego, control = list(wordLengths = c(1,Inf)))
+
+dtm_emprego <- DocumentTermMatrix(corpus_emprego, control = list(wordLengths = c(1,Inf)))
+
+# cálculo das freq. relativa dos anúncios
+relativa_empregos <- freq_relativa_word(as.matrix(tdm_emprego))
+
+# mostra 15 palavras com maiores freq. relativa
+relativa_empregos[1:15]
+
+
+# DENDROGRAMA DAS EMENTAS
+dtmss_ementa <- removeSparseTerms(dtm_ementa, 0.8) 
+
+dtmss_ementa <- as.matrix(dtmss_ementa)
+
+d_ementa <- dist(t(dtmss_ementa), method="euclidean") 
+ 
+fit_ementa <- hclust(d=d_ementa, method="complete")
+
+library(dendextend)
+
+# dendrograma euclidiano colorido com as palavras alinhadas dos anúncios
+dend_ementa <- color_branches(fit_ementa, k = 6)
+
+par( mar = c(4,4,4,2)+2.5)
+
+plot(dend_ementa,lwd = 5, lty = 5,sub="",yaxt='n')
+
+
+# DENDROGRAMA DOS ANÚNCIOS
+dtmss_empregos <- removeSparseTerms(dtm_emprego, 0.65) 
+
+dtmss_empregos <- as.matrix(dtmss_empregos)
+
+d_empregos <- dist(t(dtmss_empregos), method="euclidean")  
+
+fit_empregos <- hclust(d=d_empregos, method="complete")
+
+# dendrograma euclidiano colorido com as palavras alinhadas dos anúncios
+
+dend_empregos <- color_branches(fit_empregos, k = 6)
+
+par( mar = c(4,4,4,2)+2.5)
+
+# dendrograma dos anúncios
+plot(dend_empregos,lwd = 5, lty = 5,sub="",yaxt='n')
+
+# tranforma tdm em uma matriz
+mat_tdm_ementa <- as.matrix(tdm_ementa)
+
+# retira .txt dos nomes dos documentos
+colnames(mat_tdm_ementa) <- gsub(".txt","",colnames(mat_tdm_ementa))
+
+# HEATMAP DAS EMENTAS
+eucli_dist <- as.matrix(dist(t(mat_tdm_ementa), method = "Euclidean"))
+eucli_dist <- as.dist(eucli_dist)
+fviz_dist(eucli_dist, gradient = list(low = "blue", mid = "white", high = "red"))
+
+# BI-GRAMA DAS EMENTAS
+
+# Obtém os bigramas das ementas
+bigram_ementa <- ngram(ementa_char, n =2)
+
+# Monta uma tabela com os bigrams informando a dupla de palavra e 
+bigram_ementa <- get.phrasetable(bigram_ementa)
+
+# Mostra os 25 bigramas com maiores frequências
+bigram_ementa[1:15,1:2]
+
+# BI-GRAMA DOS ANÚNCIOS
+#################################################################################################
+
+# Declarar a dupla de palavras pro bi-grama 
+bigram_empregos <- ngram(empregos_char, n =2)
+
+# cria uma tabele com os bi-gramas
+bigram_empregos <- get.phrasetable(bigram_empregos)
+
+# mostra 25 das duplas com as maiores frquências
+bigram_empregos[1:15,]
+
+# mostra a distribuição da segunda palavra no bigrama
+dist_empregos <- Distribuicao_palavra(bigram_empregos)
+
+# mostra a distribuição da segunda palavra do bi-grama
+dist_empregos$inglês
+dist_empregos$graduação
+
+
+# calcula a distribuição da segunda palavra para as ementas
+dist_ementa <- Distribuicao_palavra(bigram_ementa)
+
+# diferença relativa entre anúncios e ementas
+dif_relativa_anuncios <- diferenca_relativa(as.matrix(relativa_empregos),as.matrix(relativa_ementa), nome = "relativa")
+
+# seleciona frq. relativa das ementas com zero
+le <- dif_relativa_anuncios[dif_relativa_anuncios$Ementas==0 & dif_relativa_anuncios$Anúncios > 3.4,]
+
+# mostra em ordem descrescente a lista com as maiores freq relativa entre
+# anúncios e ementas
+le[head(order(le$Diferença_Relativa,decreasing = TRUE),dim(le)[1]),]
+
+###########################################################################################
+###########################################################################################
+# LINGUAGEM DE PROGRAMAÇÃO PRO TADS
+
+linguagem <- c("javascript","html","css","sql","java","bash","shell","python","c",
+               "php","typescript","ruby","swift","assembly","go","objective","vbnet","r",
+               "matlab","mysql","perl","vba","scala","groovy","lua","haskell","cobol","linux")
+
+# COMPETÊNCIAS DA GESTÃO DA QUALIDADE
+gestao_qualidade <- c("metrologia","auditoria","processo","software","equipe",
+                    "iso","ts","ohsa","14000","9000","9001","14001","inglês",
+                    "excel","18001","18000","espanhol","francês")
+
+gestao_qualidade_dupla <- c("gestão qualidade","sistema certificação","analise problema")
+
+relativa_9000 <- freq_relativa_vetor("9001","9000",empregos_char)
+
+relativa_14000 <- freq_relativa_vetor("14000","14001",empregos_char)
+
+relativa_18000 <- freq_relativa_vetor("18000","18001",empregos_char)
+
+# matrix com as freq relativa das palavras pesquisadas
+relativa_unigrama <- Freq_relativa_palavra(gestao_qualidade,relativa_empregos)
+
+relativa_bigrama <- Bigrama_relativa(empregos_char,gestao_qualidade_dupla)
+
+bi_palavra <- as.character(relativa_bigrama[1:dim(relativa_bigrama)[1],1])
+
+bi_porc <- relativa_bigrama[1:dim(relativa_bigrama)[1],2]
+
+# grupo de palavras para se adicionar a lista de palavras da freq. relativa
+p_qualidade <- c("9000/9001","14000/14001","18000/18001")
+
+# porcentagem das freq. relativa
+porc <- c(relativa_9000,relativa_14000,relativa_18000)*100
+
+p_qualidade <- append(p_qualidade,bi_palavra)
+
+porc <- append(porc,bi_porc)
+
+matriz <- matrix(data = porc, ncol = 1)
+
+rownames(matriz) <- p_qualidade
+
+relativa_unigrama <- rbind(relativa_unigrama,matriz)
+
+# coloca em ordem descrescente a freq relativa
+relativa_unigrama <- as.matrix(relativa_unigrama[head(order(relativa_unigrama[,1],decreasing = TRUE),dim(relativa_unigrama)[1]),])
+
+#muda o nome da coluna
+colnames(relativa_unigrama) <- "Freq.Relativa"
+
+relativa_unigrama
+
+relativa_unigrama <- Freq_relativa_palavra(linguagem,relativa_empregos)
