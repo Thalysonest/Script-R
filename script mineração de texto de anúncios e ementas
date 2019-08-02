@@ -36,7 +36,7 @@ library(dendextend)
 ####################### DECLARAÇÕES DE FUNÇÕES ############################
 
 # calcula frequência absoluta
-freq_absoluta <- function(texto_char){
+Freq_Absoluta <- function(texto_char){
   texto_char <- strsplit(texto_char, "\\W+")
   texto_char <- unlist(texto_char)
   texto_char <- table(texto_char)
