@@ -606,6 +606,22 @@ listatrocar <- function(lista){
   return(texto)
 }
 
+Representante <- function(ementa_empregos){
+
+radword_ementa_empregos <- construirlista(ementa_empregos)
+
+#Lista das palavras mais frequente
+mat_ementa_empregos <- listatrocar(radword_ementa_empregos)
+
+#fazendo stemming das palavras para substituir pela as palavras mais comum
+ementa_empregos<- stemDocument(ementa_empregos,language = "portuguese")
+
+#substitui as palavras pelas mais frequente
+
+ementa_empregos <- funcaosubstituir(ementa_empregos,mat_ementa_empregos)
+
+  return(ementa_empregos)
+}
 
 ###########################################################################
 # PRÉ PROCESSAMENTO DAS EMENTAS
@@ -688,17 +704,7 @@ ementa_empregos <- append(ementa_char,empregos_char)
 ###########################################################################
 # OS ANÚNCIOS E EMENTAS JUNTO PARA SUBSTITUIÇÃO DOS RADICAIS
 #lista de palavras com radical e as palavras que pertencem ao mesmo radical
-radword_ementa_empregos <- construirlista(ementa_empregos)
-
-#Lista das palavras mais frequente
-mat_ementa_empregos <- listatrocar(radword_ementa_empregos)
-
-#fazendo stemming das palavras para substituir pela as palavras mais comum
-ementa_empregos<- stemDocument(ementa_empregos,language = "portuguese")
-
-#substitui as palavras pelas mais frequente
-
-ementa_empregos <- funcaosubstituir(ementa_empregos,mat_ementa_empregos)
+ementa_empregos <- Representante(ementa_empregos)
 
 # ementa de TGQ/ TADS
 ementa_char <- ementa_empregos[1:length(ementa_char)]
