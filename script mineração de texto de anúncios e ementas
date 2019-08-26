@@ -36,7 +36,7 @@ library(dendextend)
 ####################### DECLARAÇÕES DE FUNÇÕES ############################
 
 # calcula frequência absoluta
-Freq_Absoluta <- function(texto_char){
+Frequencia_Absoluta <- function(texto_char){
   texto_char <- strsplit(texto_char, "\\W+")
   texto_char <- unlist(texto_char)
   texto_char <- table(texto_char)
@@ -69,7 +69,7 @@ searchword <- function(palavra,listaword){
     }
   }
 }
-Bigrama_relativa <- function(texto,dupla_palavras){
+Bigrama_relativo <- function(texto,dupla_palavras){
   
   k=1
   
@@ -293,7 +293,7 @@ searchword2 <- function(palavra,vetorcharacter){
   return(0)
 }
 
-diferenca_relativa <- function(mat_1,mat_2,nome){
+Diferenca_Relativa <- function(mat_1,mat_2,nome){
   
   #criando um data frame com 4 colunas 1C: palavra 2C: % empregos
   # 3C: % ementas 4C:a diferença entre empregos e ementas
@@ -472,7 +472,7 @@ Retira_Plural <- function(texto_char){
   return(texto_char)
 }
 
-Freq_relativa_palavra <- function(lista_palavras,freq_relativa){
+Frequencia_Palavra <- function(lista_palavras,freq_relativa){
   i=1
   
   vetor_pos <- vector()
@@ -501,7 +501,7 @@ Freq_relativa_palavra <- function(lista_palavras,freq_relativa){
 }
 
 # calcula as frequencias relativas das palavras nos documentos
-freq_relativa_word <- function(matrix){
+Frequencia_Relativa <- function(matrix){
   probementa <- apply(matrix,1, function(c)sum(c!=0))
 
   probementa <- ((probementa)/dim(matrix)[2])*100
